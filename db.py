@@ -3,7 +3,7 @@ import sqlite3
 def get_connection():
     """Create a connection to the SQLite database."""
     conn = sqlite3.connect("data.db")
-    conn.row_factory = sqlite3.Row  # for dictionary-like row access
+    conn.row_factory = sqlite3.Row  # Allow access to columns by name
     return conn
 
 def init_db():
@@ -27,18 +27,25 @@ def insert_message(user_id: str, text: str):
     """Insert a new message into the database."""
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute(
-        "INSERT INTO messages (user_id, text) VALUES (?, ?)",
-        (user_id, text)
-    )
+    cursor.execute("INSERT INTO messages (user_id, text) VALUES (?, ?)", (user_id, text))
     conn.commit()
     conn.close()
 
-def get_messages_by_user(user_id: str):
-    """Retrieve all messages from a specific user."""
+def search_messages(keyword: str):
+    """
+    Search for messages that contain the keyword.
+
+    Args:
+        keyword (str): The search term.
+
+    Returns:
+        list: A list of sqlite3.Row objects where the message text matches the keyword.
+    """
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM messages WHERE user_id = ?", (user_id,))
+    query = "SELECT * FROM messages WHERE text LIKE ? ORDER BY timestamp DESC"
+    pattern = f"%{keyword}%"
+    cursor.execute(query, (pattern,))
     rows = cursor.fetchall()
     conn.close()
     return rows
