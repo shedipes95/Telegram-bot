@@ -9,3 +9,5 @@ user_data.json
 
 # Ignore environment variables file
 .env
+
+openssh key
