@@ -1,51 +1,68 @@
-import sqlite3
+import os
+import psycopg2
+from psycopg2.extras import RealDictCursor
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 def get_connection():
-    """Create a connection to the SQLite database."""
-    conn = sqlite3.connect("data.db")
-    conn.row_factory = sqlite3.Row  # Allow access to columns by name
+    """
+    Create a connection to the PostgreSQL database using connection parameters from environment variables.
+    """
+    conn = psycopg2.connect(
+        host=os.getenv("PGHOST", "localhost"),
+        database=os.getenv("PGDATABASE", "telegram_bot"),
+        user=os.getenv("PGUSER", "your_pg_user"),
+        password=os.getenv("PGPASSWORD", "your_pg_password"),
+        port=os.getenv("PGPORT", 5432)
+    )
     return conn
 
 def init_db():
-    """Initialize the database and create tables if they do not exist."""
+    """
+    Initialize the database by creating the messages table if it doesn't exist.
+    """
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute(
         """
         CREATE TABLE IF NOT EXISTS messages (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             user_id TEXT NOT NULL,
             text TEXT NOT NULL,
-            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+            timestamp TIMESTAMPTZ DEFAULT NOW()
         )
         """
     )
     conn.commit()
+    cursor.close()
     conn.close()
 
 def insert_message(user_id: str, text: str):
-    """Insert a new message into the database."""
+    """
+    Insert a new message into the messages table.
+    """
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO messages (user_id, text) VALUES (?, ?)", (user_id, text))
+    cursor.execute(
+        "INSERT INTO messages (user_id, text) VALUES (%s, %s)",
+        (user_id, text)
+    )
     conn.commit()
+    cursor.close()
     conn.close()
 
 def search_messages(keyword: str):
     """
-    Search for messages that contain the keyword.
-
-    Args:
-        keyword (str): The search term.
-
-    Returns:
-        list: A list of sqlite3.Row objects where the message text matches the keyword.
+    Search for messages that contain the keyword (case-insensitive) and return the results as dictionaries.
     """
     conn = get_connection()
-    cursor = conn.cursor()
-    query = "SELECT * FROM messages WHERE text LIKE ? ORDER BY timestamp DESC"
+    cursor = conn.cursor(cursor_factory=RealDictCursor)
+    query = "SELECT * FROM messages WHERE text ILIKE %s ORDER BY timestamp DESC"
     pattern = f"%{keyword}%"
     cursor.execute(query, (pattern,))
     rows = cursor.fetchall()
+    cursor.close()
     conn.close()
     return rows
