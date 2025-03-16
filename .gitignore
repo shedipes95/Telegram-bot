@@ -10,4 +10,7 @@ user_data.json
 # Ignore environment variables file
 .env
 
-openssh key
+telegram_bot
+telegram_bot.pub
+openssh
+openssh.pub
