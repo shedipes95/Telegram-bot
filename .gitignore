@@ -9,6 +9,7 @@ user_data.json
 
 # Ignore environment variables file
 .env
+.env.postgres
 
 telegram_bot
 telegram_bot.pub
